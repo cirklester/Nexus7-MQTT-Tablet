@@ -17,7 +17,15 @@ jobs:
             unzip -o app-debug.zip
           fi
 
-      # 2. Хмарне створення дерева проекту в обхід текстових багів маніфесту
+      # 2. РАДИКАЛЬНЕ ОЧИЩЕННЯ: Повністю стираємо всі маніфести та конфіги, які розпакувалися з вашого ПК
+      - name: Purge Old Infrastructure
+        run: |
+          find . -name "AndroidManifest.xml" -delete || true
+          find . -name "*.gradle" -delete || true
+          find . -name "*.gradle.kts" -delete || true
+          find . -name "styles.xml" -delete || true
+
+      # 3. Хмарне створення чистого дерева проекту з нуля
       - name: Force Generate Valid Gradle Infrastructure
         run: |
           mkdir -p app/src/main/java/com/example/myapplication
@@ -25,7 +33,7 @@ jobs:
           mkdir -p app/src/main/res/xml
           mkdir -p app/src/main/res/values
 
-          # Переміщуємо ваші Java-класи та XML-інтерфейси
+          # Переміщуємо ТІЛЬКИ чисті Java-класи та XML-інтерфейси екранів
           find . -name "MainActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/MainActivity.java \;
           find . -name "SettingsActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/SettingsActivity.java \;
           find . -name "activity_main.xml" -exec cp {} app/src/main/res/layout/activity_main.xml \;
@@ -50,7 +58,7 @@ jobs:
           }
           EOF
 
-          # Створюємо інжекційний build.gradle (Передаємо дозволи та орієнтацію через масив manifestPlaceholders)
+          # Створюємо build.gradle додатка з підстановками (Manifest Placeholders)
           cat << 'EOF' > app/build.gradle
           apply plugin: 'com.android.application'
           android {
@@ -62,8 +70,6 @@ jobs:
                   targetSdkVersion 18
                   versionCode 1
                   versionName "1.0"
-                  
-                  // Передаємо налаштування текстом прямо в обхід валідатора маніфесту
                   manifestPlaceholders = [
                       mainActivityName: "com.example.myapplication.MainActivity",
                       settingsActivityName: "com.example.myapplication.SettingsActivity"
@@ -79,8 +85,7 @@ jobs:
           }
           EOF
 
-          # Створюємо базовий AndroidManifest.xml БЕЗ використання слів "android:name" в утилітах cat.
-          # Студія зчитає налаштування вікон із масиву manifestPlaceholders, який ми прописали вище.
+          # Створюємо 100% новий AndroidManifest.xml без прямого прописування шляхів, що викликали баг
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://android.com">
@@ -107,31 +112,31 @@ jobs:
           </manifest>
           EOF
 
-          # Створюємо базовий файл стилів
+          # Створюємо чистий файл стилів
           cat << 'EOF' > app/src/main/res/values/styles.xml
           <resources>
               <style name="Theme.MyApplication" parent="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
           </resources>
           EOF
 
-      # 3. Встановлення Java 17
+      # 4. Встановлення Java 17
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 4. Підключення стабільного інструменту Gradle 8.2
+      # 5. Підключення стабільного інструменту Gradle 8.2
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.2'
 
-      # 5. Фінальний запуск компіляції проекту
+      # 6. Фінальний запуск компіляції проекту
       - name: Build with Gradle
         run: gradle :app:assembleDebug
 
-      # 6. Збереження готового сумісного APK файлу у розділ Artifacts
+      # 7. Збереження готового сумісного APK файлу у розділ Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
