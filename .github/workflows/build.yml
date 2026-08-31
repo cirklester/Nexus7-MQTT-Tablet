@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Розпакування вашого архіву
+      # 1. Розпакування вашого локального архіву
       - name: Unzip Source Files
         run: |
           if [ -f "MqttProject.zip" ]; then
@@ -17,7 +17,7 @@ jobs:
             unzip -o app-debug.zip
           fi
 
-      # 2. Потокова автоматична генерація коду
+      # 2. Хмарне створення дерева проекту в обхід текстових багів маніфесту
       - name: Force Generate Valid Gradle Infrastructure
         run: |
           mkdir -p app/src/main/java/com/example/myapplication
@@ -25,16 +25,17 @@ jobs:
           mkdir -p app/src/main/res/xml
           mkdir -p app/src/main/res/values
 
-          # Переміщення ваших вихідних Java-файлів та розміток
+          # Переміщуємо ваші Java-класи та XML-інтерфейси
           find . -name "MainActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/MainActivity.java \;
           find . -name "SettingsActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/SettingsActivity.java \;
           find . -name "activity_main.xml" -exec cp {} app/src/main/res/layout/activity_main.xml \;
           find . -name "row_sensor.xml" -exec cp {} app/src/main/res/layout/row_sensor.xml \;
           find . -name "preferences.xml" -exec cp {} app/src/main/res/xml/preferences.xml \;
 
-          # Створення файлів налаштувань Gradle
+          # Створюємо базовий конфіг settings.gradle
           echo "include ':app'" > settings.gradle
 
+          # Створюємо головний build.gradle
           cat << 'EOF' > build.gradle
           buildscript {
               repositories { google(); mavenCentral() }
@@ -49,6 +50,7 @@ jobs:
           }
           EOF
 
+          # Створюємо інжекційний build.gradle (Передаємо дозволи та орієнтацію через масив manifestPlaceholders)
           cat << 'EOF' > app/build.gradle
           apply plugin: 'com.android.application'
           android {
@@ -60,6 +62,12 @@ jobs:
                   targetSdkVersion 18
                   versionCode 1
                   versionName "1.0"
+                  
+                  // Передаємо налаштування текстом прямо в обхід валідатора маніфесту
+                  manifestPlaceholders = [
+                      mainActivityName: "com.example.myapplication.MainActivity",
+                      settingsActivityName: "com.example.myapplication.SettingsActivity"
+                  ]
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
@@ -71,36 +79,35 @@ jobs:
           }
           EOF
 
-          # Створюємо маніфест за допомогою тимчасових маркерів MATCH_COLON
+          # Створюємо базовий AndroidManifest.xml БЕЗ використання слів "android:name" в утилітах cat.
+          # Студія зчитає налаштування вікон із масиву manifestPlaceholders, який ми прописали вище.
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlnsMATCH_COLONandroid="http://android.com">
-              <uses-permission androidMATCH_COLONname="android.permission.INTERNET"/>
-              <uses-permission androidMATCH_COLONname="android.permission.ACCESS_NETWORK_STATE"/>
+          <manifest xmlns:android="http://android.com">
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
               <application
-                  androidMATCH_COLONallowBackup="true"
-                  androidMATCH_COLONlabel="MQTT Weather Tablet"
-                  androidMATCH_COLONtheme="@android:style/Theme.Holo.NoActionBar.Fullscreen">
+                  android:allowBackup="true"
+                  android:label="MQTT Weather Tablet"
+                  android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen">
                   <activity
-                      androidMATCH_COLONname="com.example.myapplication.MainActivity"
-                      androidMATCH_COLONscreenOrientation="landscape"
-                      androidMATCH_COLONexported="true">
+                      android:name="${mainActivityName}"
+                      android:screenOrientation="landscape"
+                      android:exported="true">
                       <intent-filter>
-                          <action androidMATCH_COLONname="android.intent.action.MAIN" />
-                          <category androidMATCH_COLONname="android.intent.category.LAUNCHER" />
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
                   <activity
-                      androidMATCH_COLONname="com.example.myapplication.SettingsActivity"
-                      androidMATCH_COLONlabel="Налаштування"
-                      androidMATCH_COLONexported="false" />
+                      android:name="${settingsActivityName}"
+                      android:label="Налаштування"
+                      android:exported="false" />
               </application>
           </manifest>
           EOF
 
-          # Використовуємо потоковий утилітарний Linux-редактор sed, який виправляє маркери на двокрапку в обхід багів буфера
-          sed -i 's/MATCH_COLON/:/g' app/src/main/AndroidManifest.xml
-
+          # Створюємо базовий файл стилів
           cat << 'EOF' > app/src/main/res/values/styles.xml
           <resources>
               <style name="Theme.MyApplication" parent="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
@@ -114,17 +121,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 4. Підключення стабільного Gradle 8.2
+      # 4. Підключення стабільного інструменту Gradle 8.2
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.2'
 
-      # 5. Компіляція проекту
+      # 5. Фінальний запуск компіляції проекту
       - name: Build with Gradle
         run: gradle :app:assembleDebug
 
-      # 6. Збереження готового APK файлу у розділ Artifacts
+      # 6. Збереження готового сумісного APK файлу у розділ Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
