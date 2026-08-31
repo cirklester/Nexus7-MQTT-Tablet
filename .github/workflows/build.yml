@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Розпакування вашого архіву коду
+      # 1. Розпакування архіву
       - name: Unzip Source Files
         run: |
           if [ -f "MqttProject.zip" ]; then
@@ -17,115 +17,54 @@ jobs:
             unzip -o app-debug.zip
           fi
 
-      # 2. Примусове хмарне створення правильної структури проекту з нуля
+      # 2. Хмарна генерація файлів за допомогою безпечного екранування символів
       - name: Force Generate Valid Gradle Infrastructure
         run: |
-          # Створюємо базову структуру папок, якщо якась відсутня
           mkdir -p app/src/main/java/com/example/myapplication
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/xml
           mkdir -p app/src/main/res/values
 
-          # Переміщуємо ваші Java-файли у правильне місце, де б вони не лежали після розпакування
+          # Копіюємо ваші Java-файли
           find . -name "MainActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/MainActivity.java \;
           find . -name "SettingsActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/SettingsActivity.java \;
           find . -name "activity_main.xml" -exec cp {} app/src/main/res/layout/activity_main.xml \;
           find . -name "row_sensor.xml" -exec cp {} app/src/main/res/layout/row_sensor.xml \;
           find . -name "preferences.xml" -exec cp {} app/src/main/res/xml/preferences.xml \;
 
-          # Самі створюємо 100% валідний файл settings.gradle
+          # Створюємо базовий settings.gradle
           echo "include ':app'" > settings.gradle
 
-          # Самі створюємо безвідмовний build.gradle для всього проекту
-          cat << 'EOF' > build.gradle
-          buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-                  maven { url 'https://eclipse.org' }
-              }
-          }
-          EOF
+          # Створюємо головний build.gradle
+          printf "buildscript {\n    repositories { google(); mavenCentral() }\n    dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }\n}\nallprojects {\n    repositories {\n        google()\n        mavenCentral()\n        maven { url 'https://eclipse.org' }\n    }\n}\n" > build.gradle
 
-          # Самі створюємо build.gradle конкретно для додатка (з підтримкою Android 4.3 та Java 8)
-          cat << 'EOF' > app/build.gradle
-          apply plugin: 'com.android.application'
-          android {
-              compileSdkVersion 34
-              namespace "com.example.myapplication"
-              defaultConfig {
-                  applicationId "com.example.myapplication"
-                  minSdkVersion 18
-                  targetSdkVersion 18
-                  versionCode 1
-                  versionName "1.0"
-              }
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_1_8
-                  targetCompatibility JavaVersion.VERSION_1_8
-              }
-          }
-          dependencies {
-              implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.1'
-          }
-          EOF
+          # Створюємо build.gradle для додатка (з підтримкою Android 4.3 та Java 8)
+          printf "apply plugin: 'com.android.application'\nandroid {\n    compileSdkVersion 34\n    namespace \"com.example.myapplication\"\n    defaultConfig {\n        applicationId \"com.example.myapplication\"\n        minSdkVersion 18\n        targetSdkVersion 18\n        versionCode 1\n        versionName \"1.0\"\n    }\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n    }\n}\ndependencies {\n    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.1'\n}\n" > app/build.gradle
 
-          # Самі створюємо 100% чистий та робочий AndroidManifest.xml
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://android.com">
-              <uses-permission android:name="android.permission.INTERNET"/>
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-              <application
-                  android:allowBackup="true"
-                  android:label="MQTT Weather Tablet"
-                  android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen">
-                  <activity
-                      android:name="com.example.myapplication.MainActivity"
-                      android:screenOrientation="landscape"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-                  <activity
-                      android:name="com.example.myapplication.SettingsActivity"
-                      android:label="Налаштування"
-                      android:exported="false" />
-              </application>
-          </manifest>
-          EOF
+          # Створюємо 100%% чистий AndroidManifest.xml за допомогою шістнадцяткового кодування двокрапки (\x3a)
+          printf "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns\x3aandroid=\"http://android.com\">\n    <uses-permission android\x3aname=\"android.permission.INTERNET\"/>\n    <uses-permission android\x3aname=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <application\n        android\x3aallowBackup=\"true\"\n        android\x3alabel=\"MQTT Weather Tablet\"\n        android\x3atheme=\"@android\x3astyle/Theme.Holo.NoActionBar.Fullscreen\">\n        <activity\n            android\x3aname=\"com.example.myapplication.MainActivity\"\n            android\x3ascreenOrientation=\"landscape\"\n            android\x3aexported=\"true\">\n            <intent-filter>\n                <action android\x3aname=\"android.intent.action.MAIN\" />\n                <category android\x3aname=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n        <activity\n            android\x3aname=\"com.example.myapplication.SettingsActivity\"\n            android\x3alabel=\"Налаштування\"\n            android\x3aexported=\"false\" />\n    </application>\n</manifest>\n" > app/src/main/AndroidManifest.xml
 
-          # Створюємо базові стилі, щоб компілятор не ламався
-          cat << 'EOF' > app/src/main/res/values/styles.xml
-          <resources>
-              <style name="Theme.MyApplication" parent="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
-          </resources>
-          EOF
+          # Створюємо стилі
+          printf "<resources>\n    <style name=\"Theme.MyApplication\" parent=\"@android\x3astyle/Theme.Holo.NoActionBar.Fullscreen\" />\n</resources>\n" > app/src/main/res/values/styles.xml
 
-      # 3. Встановлення Java 17 для запуску сучасного інструменту збірки
+      # 3. Встановлення Java 17
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 4. Автоматичне підключення перевіреного та чистого компілятора Gradle 8.2
+      # 4. Підключення стабільного Gradle 8.2
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.2'
 
-      # 5. Фінальний запуск компіляції
+      # 5. Компіляція
       - name: Build with Gradle
         run: gradle :app:assembleDebug
 
-      # 6. Збереження та видача вам готового APK файлу
+      # 6. Збереження готового APK файлу у розділ завантажень (Artifacts)
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
