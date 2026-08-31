@@ -8,44 +8,51 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Розпакування та інтелектуальне вирівнювання структури папок
-      - name: Unzip and Align Project Structure
+      # 1. Розпакування та примусовий глибокий пошук файлів проекту
+      - name: Advanced Unzip and Project Extraction
         run: |
           if [ -f "MqttProject.zip" ]; then
             unzip -o MqttProject.zip
           elif [ -f "app-debug.zip" ]; then
             unzip -o app-debug.zip
           fi
+
+          echo "=== Глибокий пошук структури проекту ==="
+          # Шукаємо, в якій саме папці лежить settings.gradle.kts
+          SETTINGS_PATH=$(find . -name "settings.gradle.kts" -not -path "*/.github/*" | head -n 1)
           
-          # Якщо файли розпакувалися всередину підпапки, переміщуємо їх у корінь
-          if [ -d "MqttProject" ]; then
-            echo "Moving files from MqttProject subfolder to root..."
-            mv MqttProject/* . || true
-            mv MqttProject/.* . || true
-          elif [ -d "MyApplication" ]; then
-            echo "Moving files from MyApplication subfolder to root..."
-            mv MyApplication/* . || true
-            mv MyApplication/.* . || true
+          if [ -n "$SETTINGS_PATH" ]; then
+            PROJECT_DIR=$(dirname "$SETTINGS_PATH")
+            echo "Проект знайдено в папці: $PROJECT_DIR"
+            
+            # Якщо проект лежить не в корені, переміщуємо його вміст сюди
+            if [ "$PROJECT_DIR" != "." ]; then
+              cp -r $PROJECT_DIR/* . || true
+              cp -r $PROJECT_DIR/.* . || true
+            fi
+          else
+            echo "🛑 Помилка: Не знайдено файл settings.gradle.kts у жодній папці!"
+            exit 1
           fi
 
-      # 2. Встановлення правильної версії JDK (Java 17)
+      # 2. Встановлення правильної версії Java
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. Автоматичне завантаження чистого та сумісного Gradle 8.8
+      # 3. Автоматичний підбір читого інструменту Gradle 8.8
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.8'
 
-      # 4. Гарантований запуск компіляції додатка
+      # 4. Компiляція безвідмовного Java 8 байткоду для Nexus 7
       - name: Build with Gradle
         run: gradle assembleDebug
 
-      # 5. Збереження та видача вам готового APK файлу для Nexus 7
+      # 5. Публікація готового робочого APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
