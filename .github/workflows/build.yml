@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Розпакування архіву
+      # 1. Розпакування вашого архіву
       - name: Unzip Source Files
         run: |
           if [ -f "MqttProject.zip" ]; then
@@ -17,7 +17,7 @@ jobs:
             unzip -o app-debug.zip
           fi
 
-      # 2. Хмарна генерація файлів за допомогою безпечного екранування символів
+      # 2. Потокова автоматична генерація коду
       - name: Force Generate Valid Gradle Infrastructure
         run: |
           mkdir -p app/src/main/java/com/example/myapplication
@@ -25,27 +25,87 @@ jobs:
           mkdir -p app/src/main/res/xml
           mkdir -p app/src/main/res/values
 
-          # Копіюємо ваші Java-файли
+          # Переміщення ваших вихідних Java-файлів та розміток
           find . -name "MainActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/MainActivity.java \;
           find . -name "SettingsActivity.java" -exec cp {} app/src/main/java/com/example/myapplication/SettingsActivity.java \;
           find . -name "activity_main.xml" -exec cp {} app/src/main/res/layout/activity_main.xml \;
           find . -name "row_sensor.xml" -exec cp {} app/src/main/res/layout/row_sensor.xml \;
           find . -name "preferences.xml" -exec cp {} app/src/main/res/xml/preferences.xml \;
 
-          # Створюємо базовий settings.gradle
+          # Створення файлів налаштувань Gradle
           echo "include ':app'" > settings.gradle
 
-          # Створюємо головний build.gradle
-          printf "buildscript {\n    repositories { google(); mavenCentral() }\n    dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }\n}\nallprojects {\n    repositories {\n        google()\n        mavenCentral()\n        maven { url 'https://eclipse.org' }\n    }\n}\n" > build.gradle
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories { google(); mavenCentral() }
+              dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+                  maven { url 'https://eclipse.org' }
+              }
+          }
+          EOF
 
-          # Створюємо build.gradle для додатка (з підтримкою Android 4.3 та Java 8)
-          printf "apply plugin: 'com.android.application'\nandroid {\n    compileSdkVersion 34\n    namespace \"com.example.myapplication\"\n    defaultConfig {\n        applicationId \"com.example.myapplication\"\n        minSdkVersion 18\n        targetSdkVersion 18\n        versionCode 1\n        versionName \"1.0\"\n    }\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n    }\n}\ndependencies {\n    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.1'\n}\n" > app/build.gradle
+          cat << 'EOF' > app/build.gradle
+          apply plugin: 'com.android.application'
+          android {
+              compileSdkVersion 34
+              namespace "com.example.myapplication"
+              defaultConfig {
+                  applicationId "com.example.myapplication"
+                  minSdkVersion 18
+                  targetSdkVersion 18
+                  versionCode 1
+                  versionName "1.0"
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+          }
+          dependencies {
+              implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.1'
+          }
+          EOF
 
-          # Створюємо 100%% чистий AndroidManifest.xml за допомогою шістнадцяткового кодування двокрапки (\x3a)
-          printf "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns\x3aandroid=\"http://android.com\">\n    <uses-permission android\x3aname=\"android.permission.INTERNET\"/>\n    <uses-permission android\x3aname=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <application\n        android\x3aallowBackup=\"true\"\n        android\x3alabel=\"MQTT Weather Tablet\"\n        android\x3atheme=\"@android\x3astyle/Theme.Holo.NoActionBar.Fullscreen\">\n        <activity\n            android\x3aname=\"com.example.myapplication.MainActivity\"\n            android\x3ascreenOrientation=\"landscape\"\n            android\x3aexported=\"true\">\n            <intent-filter>\n                <action android\x3aname=\"android.intent.action.MAIN\" />\n                <category android\x3aname=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n        <activity\n            android\x3aname=\"com.example.myapplication.SettingsActivity\"\n            android\x3alabel=\"Налаштування\"\n            android\x3aexported=\"false\" />\n    </application>\n</manifest>\n" > app/src/main/AndroidManifest.xml
+          # Створюємо маніфест за допомогою тимчасових маркерів MATCH_COLON
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlnsMATCH_COLONandroid="http://android.com">
+              <uses-permission androidMATCH_COLONname="android.permission.INTERNET"/>
+              <uses-permission androidMATCH_COLONname="android.permission.ACCESS_NETWORK_STATE"/>
+              <application
+                  androidMATCH_COLONallowBackup="true"
+                  androidMATCH_COLONlabel="MQTT Weather Tablet"
+                  androidMATCH_COLONtheme="@android:style/Theme.Holo.NoActionBar.Fullscreen">
+                  <activity
+                      androidMATCH_COLONname="com.example.myapplication.MainActivity"
+                      androidMATCH_COLONscreenOrientation="landscape"
+                      androidMATCH_COLONexported="true">
+                      <intent-filter>
+                          <action androidMATCH_COLONname="android.intent.action.MAIN" />
+                          <category androidMATCH_COLONname="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <activity
+                      androidMATCH_COLONname="com.example.myapplication.SettingsActivity"
+                      androidMATCH_COLONlabel="Налаштування"
+                      androidMATCH_COLONexported="false" />
+              </application>
+          </manifest>
+          EOF
 
-          # Створюємо стилі
-          printf "<resources>\n    <style name=\"Theme.MyApplication\" parent=\"@android\x3astyle/Theme.Holo.NoActionBar.Fullscreen\" />\n</resources>\n" > app/src/main/res/values/styles.xml
+          # Використовуємо потоковий утилітарний Linux-редактор sed, який виправляє маркери на двокрапку в обхід багів буфера
+          sed -i 's/MATCH_COLON/:/g' app/src/main/AndroidManifest.xml
+
+          cat << 'EOF' > app/src/main/res/values/styles.xml
+          <resources>
+              <style name="Theme.MyApplication" parent="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
+          </resources>
+          EOF
 
       # 3. Встановлення Java 17
       - name: Set up JDK 17
@@ -60,11 +120,11 @@ jobs:
         with:
           gradle-version: '8.2'
 
-      # 5. Компіляція
+      # 5. Компіляція проекту
       - name: Build with Gradle
         run: gradle :app:assembleDebug
 
-      # 6. Збереження готового APK файлу у розділ завантажень (Artifacts)
+      # 6. Збереження готового APK файлу у розділ Artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
